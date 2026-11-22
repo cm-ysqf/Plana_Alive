@@ -1,0 +1,23 @@
+{
+  "name": "plana-alive-desktop",
+  "productName": "Plana Alive",
+  "version": "0.3.5",
+  "private": true,
+  "description": "普拉娜 Windows 桌面客户端",
+  "main": "main.cjs",
+  "author": "PLANA ALIVE",
+  "license": "UNLICENSED",
+  "scripts": {
+    "prepare-ui": "node scripts/prepare.cjs",
+    "start": "npm run prepare-ui && electron .",
+    "build": "npm run build:portable",
+    "build:folder": "npm run prepare-ui && node scripts/build.cjs",
+    "build:portable": "npm run prepare-ui && node scripts/build-portable.cjs",
+    "test": "node --test test/*.test.cjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.4",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  }
+}

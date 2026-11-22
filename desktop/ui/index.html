@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; media-src 'self' blob:; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>普拉娜 · 消息与设置</title>
+  <link rel="stylesheet" href="panel.css">
+  <script type="module" src="panel.js"></script>
+</head>
+<body>
+  <header><span class="mark">✧</span><div><h1>普拉娜</h1><p>PLANA ALIVE · DESKTOP</p></div><span id="online" class="badge">连接中</span><button id="hide-panel" aria-label="关闭面板">×</button></header>
+  <nav aria-label="功能"><button id="tab-chat" class="selected" aria-selected="true">发送消息</button><button id="tab-settings" aria-selected="false">窗口与角色</button></nav>
+  <main>
+    <section id="chat-page">
+      <div id="chat-log" class="chat-log" role="log" aria-live="polite"><div class="welcome">老师，我在这里。<small>选择聊天，或让普拉娜念出一段台词。</small></div></div>
+      <label class="label" for="mode">消息方式</label>
+      <select id="mode"><option value="chat">和普拉娜聊天</option><option value="voice">让普拉娜说这段话（日语）</option><option value="subtitle">只显示字幕</option></select>
+      <p id="chat-hint" class="hint">正在读取云端配置…</p>
+      <textarea id="message" maxlength="200" rows="4" placeholder="想对我说些什么？"></textarea>
+      <output id="quick-status" role="status" aria-live="polite"></output>
+      <div class="compose-footer"><label class="toggle"><input id="voice-enabled" type="checkbox" checked>聊天回复时播放语音</label><span id="count">0 / 200</span></div>
+      <div class="actions"><button id="send" class="primary" disabled>发送消息</button><button id="stop">停止</button><button id="clear" class="quiet">清空记录</button></div>
+      <p id="status" class="status" role="status">正在连接云端…</p>
+      <audio id="audio" preload="auto"></audio>
+    </section>
+    <section id="settings-page" hidden>
+      <h2>桌面窗口</h2>
+      <label class="switch-row"><span>始终置于最顶层<small>让普拉娜显示在其他窗口前面</small></span><input id="alwaysOnTop" type="checkbox"></label>
+      <label class="switch-row"><span>点击穿透<small>鼠标操作传给下方窗口</small></span><input id="clickThrough" type="checkbox"></label>
+      <label class="switch-row"><span>锁定窗口位置<small>禁止拖动窗口，仍可摸头与聊天</small></span><input id="windowLocked" type="checkbox"></label>
+      <p id="shortcut-hint" class="hint">Ctrl+Alt+P 切换穿透，或使用任务栏托盘菜单恢复。</p>
+      <div class="dimensions"><label>窗口宽度<input id="width" type="number" min="240" max="1800" step="10"></label><span>×</span><label>窗口高度<input id="height" type="number" min="320" max="2000" step="10"></label><button id="resize">应用</button></div>
+      <div class="presets"><button data-size="300,460">小窗口</button><button data-size="420,640">标准</button><button data-size="560,840">大窗口</button></div>
+      <h2>角色构图</h2>
+      <label class="range-label" for="zoom">角色缩放<output id="zoom-value">100%</output></label><input id="zoom" type="range" min="0.5" max="2.5" step="0.01">
+      <label class="range-label" for="x">水平位置 X<output id="x-value">0</output></label><input id="x" type="range" min="-1" max="1" step="0.01">
+      <label class="range-label" for="y">垂直位置 Y<output id="y-value">0</output></label><input id="y" type="range" min="-1" max="1" step="0.01">
+      <div class="actions"><button id="reset-pose">恢复居中与原始缩放</button></div>
+      <h2>鼠标互动</h2>
+      <label class="switch-row"><span>鼠标靠近时显示对话框</span><input id="hoverDialog" type="checkbox"></label>
+      <label class="switch-row"><span>平滑追踪鼠标</span><input id="mouseTracking" type="checkbox"></label>
+      <label class="switch-row"><span>按住头部左右抚摸</span><input id="headpat" type="checkbox"></label>
+      <label class="switch-row"><span>点击身体播放原壁纸台词</span><input id="touchVoice" type="checkbox"></label>
+      <h2>悬浮对话框</h2>
+      <p class="hint">位置相对角色下方，超出屏幕时自动移回可见区域。</p>
+      <div class="layout-fields">
+        <label>基准宽度（随模型缩放）<input id="dialogWidth" type="number" min="240" max="650"></label>
+        <label>字号（像素）<input id="dialogFontSize" type="number" min="11" max="24"></label>
+        <label>水平偏移（像素）<input id="dialogX" type="number" min="-1000" max="1000"></label>
+        <label>垂直偏移（像素）<input id="dialogY" type="number" min="-1000" max="1000"></label>
+      </div>
+      <h2>角色字幕</h2>
+      <div class="layout-fields">
+        <label>字号（像素）<input id="subtitleFontSize" type="number" min="12" max="64"></label>
+        <label>气泡宽度<input id="subtitleWidth" type="number" min="30" max="95"></label>
+        <label>水平偏移（百分比）<input id="subtitleX" type="number" min="-40" max="40"></label>
+        <label>垂直偏移（百分比）<input id="subtitleY" type="number" min="-40" max="90"></label>
+      </div>
+      <div class="actions"><button id="apply-layout">应用对话框与字幕设置</button><button id="reset-layout">恢复默认</button></div>
+      <p class="hint">在角色上按住鼠标左键可拖动整个窗口；右键打开菜单。构图和窗口设置会自动保存。</p>
+      <p id="settings-status" class="status" role="status"></p>
+      <footer id="cloud-address"></footer>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "plana-alive-client-source",
+  "version": "0.3.5",
+  "private": true,
+  "type": "module",
+  "description": "PLANA ALIVE Windows desktop client source",
+  "license": "UNLICENSED",
+  "scripts": {
+    "setup": "npm --prefix desktop ci",
+    "prepare-ui": "npm --prefix desktop run prepare-ui",
+    "start": "npm --prefix desktop start",
+    "build": "npm --prefix desktop run build:portable",
+    "test": "node --test test/*.test.mjs && npm --prefix desktop test"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
