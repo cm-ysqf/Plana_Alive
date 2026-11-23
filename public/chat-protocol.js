@@ -27,7 +27,7 @@ export function decodeChatResponse(content, character) {
   try { data = JSON.parse(content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')); }
   catch { throw new Error('聊天模型未返回有效协议 JSON，请检查系统提示词'); }
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('聊天回复必须为 JSON 对象');
-  const allowed = ['reply', 'speech', 'control', 'emotion', 'intensity'];
+  const allowed = ['reply', 'speech', 'control', 'emotion', 'intensity', 'segments'];
   if (Object.keys(data).some(key => !allowed.includes(key))) throw new Error('聊天回复包含未知顶层字段');
   for (const key of ['reply', 'speech']) if (typeof data[key] !== 'string' || !data[key].trim() || data[key].length > 2000) throw new Error(`${key} 须为 1–2000 字的纯文本`);
   // Accept the previous two-field control format while always returning the new envelope.
@@ -35,5 +35,16 @@ export function decodeChatResponse(content, character) {
   const legacy = {};
   if (Object.hasOwn(data, 'emotion')) legacy.emotion = data.emotion;
   if (Object.hasOwn(data, 'intensity')) legacy.intensity = data.intensity;
-  return { reply: data.reply.trim(), speech: data.speech.trim(), control: normalizeControl(Object.hasOwn(data, 'control') ? data.control : legacy, character) };
+  const answer = { reply: data.reply.trim(), speech: data.speech.trim(), control: normalizeControl(Object.hasOwn(data, 'control') ? data.control : legacy, character) };
+  if (Object.hasOwn(data, 'segments')) {
+    if (!Array.isArray(data.segments) || data.segments.length < 2 || data.segments.length > 4) throw new Error('segments 须含 2–4 组对应短句');
+    answer.segments = data.segments.map(part => {
+      if (!part || typeof part !== 'object' || Array.isArray(part) || Object.keys(part).some(key => !['reply', 'speech'].includes(key))) throw new Error('语句分段仅允许 reply 和 speech');
+      for (const key of ['reply', 'speech']) if (typeof part[key] !== 'string' || !part[key].trim() || part[key].length > 240) throw new Error('每段文本须为 1–240 字');
+      return { reply: part.reply.trim(), speech: part.speech.trim() };
+    });
+    const compact = text => text.replace(/\s+/gu, '');
+    for (const key of ['reply', 'speech']) if (compact(answer.segments.map(part => part[key]).join('')) !== compact(answer[key])) throw new Error('分段内容须与完整回复一致');
+  }
+  return answer;
 }

@@ -4,6 +4,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { defaults, validateSettings, visibleBounds } = require('./settings.cjs');
 const { contains, quickBounds, statusBounds, bubbleBounds, validGeometry } = require('./geometry.cjs');
+const { compareVersions, verifyManifest, downloadUpdate, installPortable } = require('./updater.cjs');
 const { uploadHardware } = require('./hardware.cjs');
 const CLOUD = 'http://8.156.38.132';
 const DISPLAY = 'plana://desktop/display';
@@ -12,6 +13,7 @@ let modelGeometry, pointerTimer, quickMode = false, lastNear = 0, lastTap = 0;
 let quickCollapsed = false, quickBusy = false, quickAway = false, quickFinishedAt = 0, activityText = '正在发送…';
 let bubble, bubbleText = '', bubbleHeight = 80, bubbleTimer, bubblePayload = '';
 let display, panel, tray, cloudSession, settings, settingsFile, quitting = false, drag, saveTimer, controlTail = Promise.resolve(), configurationTail = Promise.resolve();
+let checkingUpdate=false, installingUpdate=false;
 let shortcuts = { clickThrough: '', messages: '' };
 const requests = new Map();
 const panelURL = pathToFileURL(path.join(__dirname, 'ui/index.html')).href;
@@ -70,6 +72,7 @@ function openPanel(tab = 'chat') {
 function menuTemplate() {
   return [
     { label: '向普拉娜发送消息…', click: () => openPanel('chat') },
+    { label: '问题反馈与建议…', click: () => { openPanel('settings'); panel.webContents.send('panel:feedback'); } },
     { label: '窗口与角色设置…', click: () => openPanel('settings') },
     { type: 'separator' },
     { label: '始终置于最顶层', type: 'checkbox', checked: settings.alwaysOnTop, click: item => configure({ alwaysOnTop: item.checked }).catch(report) },
@@ -81,6 +84,7 @@ function menuTemplate() {
     { label: '重置角色位置与缩放', click: () => configure({ zoom: 1, x: 0, y: 0 }).catch(report) },
     { label: '停止语音和字幕', click: () => { createPanel(); panel.webContents.send('panel:stop'); cloudRequest('/api/action', { action: 'stop' }).catch(report); } },
     { label: display?.isVisible() ? '隐藏角色' : '显示角色', click: () => { if (display.isVisible()) display.hide(); else display.show(); updateTray(); } },
+    { label: '检查更新与公告', click: () => checkUpdates(true).catch(report) },
     { label: '重新连接云端', click: () => { reconnect().catch(report); } },
     { type: 'separator' },
     { label: '退出普拉娜', click: () => app.quit() }
@@ -297,7 +301,7 @@ async function boot() {
   ipcMain.handle('panel:request', async (event, { route, body, id }) => {
     requirePanel(event);
     const gets = ['/api/state', '/api/inference/config', '/api/inference/health'];
-    const posts = ['/api/control', '/api/action', '/api/chat', '/api/tts'];
+    const posts = ['/api/control', '/api/action', '/api/chat', '/api/tts', '/api/feedback'];
     if (!(body === undefined ? gets : posts).includes(route) || typeof id !== 'string' || id.length > 100 || requests.has(id)) throw new Error('请求格式错误');
     if (body !== undefined && JSON.stringify(body).length > 100000) throw new Error('请求过大');
     const controller = new AbortController(); requests.set(id, controller);
@@ -310,8 +314,37 @@ async function boot() {
   connectDisplay();
   pointerTimer = setInterval(trackDesktop, 33);
   uploadHardware({ app, cloudSession, origin: CLOUD, signal: AbortSignal.timeout(12000) }).catch(e => log(e.message));
+  checkUpdates().catch(e=>log('update check: '+e.message));
   log(`ready; shortcuts=${JSON.stringify(shortcuts)}`);
 }
 app.on('before-quit', () => { quitting = true; for (const controller of requests.values()) controller.abort(); clearTimeout(saveTimer); if (settingsFile && settings) { try { fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2)); } catch {} } });
 app.on('will-quit', () => { clearInterval(pointerTimer); clearTimeout(bubbleTimer); globalShortcut.unregisterAll(); tray?.destroy(); });
 app.on('window-all-closed', () => { if (!quitting) app.quit(); });
+
+async function checkUpdates(manual=false){
+  if(checkingUpdate||installingUpdate)return;checkingUpdate=true;
+  try{
+    const response=await cloudSession.fetch(CLOUD+'/api/releases/latest',{redirect:'error',signal:AbortSignal.timeout(12000)});
+    if(!response.ok)throw Error('暂时无法检查更新');
+    const manifest=verifyManifest(await response.json());
+    const stateFile=path.join(app.getPath('userData'),'update-state.json');let seen={};try{seen=JSON.parse(fs.readFileSync(stateFile,'utf8'));}catch{}
+    const available=manifest.version&&compareVersions(manifest.version,app.getVersion())>0;
+    const announcement=manifest.announcement||{},unread=announcement.id&&announcement.id!==seen.announcement;
+    if(!available&&!unread&&!manual)return;
+    if(!available&&!announcement.body){if(manual)await dialog.showMessageBox({type:'info',title:'更新检查',message:'当前已是最新版本 '+app.getVersion(),detail:'更新通道：Pre-Release'});return;}
+    const result=await dialog.showMessageBox({type:'info',title:available?'发现新版本 · Pre-Release':announcement.title||'软件公告',message:available?`发现 ${manifest.version}，当前 ${app.getVersion()}`:announcement.title||'软件公告',detail:[announcement.body,available?manifest.notes:'',available?'下载并校验完成后将退出当前程序，安装更新并重新启动。':''].filter(Boolean).join('\n\n'),buttons:available?['下载并更新','稍后']:['知道了'],defaultId:0,cancelId:available?1:0,noLink:true});
+    if(announcement.id){seen.announcement=announcement.id;fs.writeFileSync(stateFile,JSON.stringify(seen));}
+    if(!available||result.response!==0)return;
+    const target=process.env.PORTABLE_EXECUTABLE_FILE;
+    if(!target||!fs.existsSync(target))throw Error('自动替换适用于单文件版，请运行 Portable.exe 后再更新');
+    installingUpdate=true;
+    const directory=path.join(app.getPath('userData'),'updates');
+    tray?.setToolTip('普拉娜 · 正在下载更新');
+    const source=await downloadUpdate({manifest,cloudSession,origin:CLOUD,directory,onProgress:percent=>tray?.setToolTip(`普拉娜 · 更新下载 ${percent}%`)});
+    await installPortable({source,target,pid:process.pid,sha256:manifest.sha256,directory});
+    app.quit();
+  }catch(error){
+    if(manual||installingUpdate)await dialog.showMessageBox({type:'error',title:'更新未完成',message:error.message,detail:'当前版本仍可继续使用，可从托盘菜单重新检查更新。'});
+    else log('update check: '+error.message);
+  }finally{checkingUpdate=false;installingUpdate=false;updateTray();}
+}

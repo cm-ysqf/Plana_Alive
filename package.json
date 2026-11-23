@@ -1,6 +1,6 @@
 {
   "name": "plana-alive-client-source",
-  "version": "0.3.5",
+  "version": "0.3.7",
   "private": true,
   "type": "module",
   "description": "PLANA ALIVE Windows desktop client source",

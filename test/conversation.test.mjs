@@ -6,7 +6,7 @@ function setup(request) {
   const poses = [], played = [], statuses = [], replies = [];
   let conversation;
   conversation = new Conversation({ request, prepare: async () => {}, stop: () => conversation.cancel(),
-    pose: async v => poses.push(v), play: async (v, signal, onStarted) => { played.push(v); await onStarted(); }, status: v => statuses.push(v), reply: (...v) => replies.push(v) });
+    pose: async v => poses.push(v), play: async (v, signal, onStarted) => { played.push(v); await onStarted(); }, pause: async () => {}, status: v => statuses.push(v), reply: (...v) => replies.push(v) });
   return { conversation, poses, played, statuses, replies };
 }
 test('chat uses speech separately, applies emotion and keeps character histories separate', async () => {

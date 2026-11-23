@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 fs.mkdirSync(path.join(root, 'ui/shared'), { recursive: true });
-for (const file of ['conversation.js', 'chat-protocol.js', 'emotions.js', 'audio.js', 'reply-lifetime.js', 'speech-performance.js']) {
+for (const file of ['conversation.js', 'speech-segments.js', 'chat-protocol.js', 'emotions.js', 'audio.js', 'reply-lifetime.js', 'speech-performance.js']) {
   fs.copyFileSync(path.join(root, '../public', file), path.join(root, 'ui/shared', file));
 }
 // Model/runtime files are supplied locally and are not published in this repository.

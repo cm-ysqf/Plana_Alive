@@ -1,6 +1,6 @@
 # PLANA ALIVE · Windows 客户端
 
-普拉娜桌面客户端源码，当前版本 **0.3.5**。使用 Electron 和 Spine 3.8 角色渲染，支持透明桌面角色、拖动与锁定、点击穿透、鼠标跟随、摸头互动、精简输入框、角色字幕气泡，以及通过云端服务进行文字聊天与语音播放。
+普拉娜桌面客户端源码，当前版本 **0.3.7**。使用 Electron 和 Spine 3.8 角色渲染，支持透明桌面角色、拖动与锁定、点击穿透、鼠标跟随、摸头互动、精简输入框、角色字幕气泡，以及通过云端服务进行文字聊天与语音播放。
 
 ## 环境与资源
 
@@ -27,7 +27,7 @@ npm start
 npm run build
 ```
 
-产物：`desktop/release/0.3.5/portable/PlanaAlive-0.3.5-Portable.exe`。单文件版启动时会将运行组件解压到临时目录；用户设置独立保存在 Windows 用户应用数据目录。此仓库只提交源码，不提交运行库、依赖或构建产物。
+产物：`desktop/release/0.3.7/portable/PlanaAlive-0.3.7-Portable.exe`。单文件版启动时会将运行组件解压到临时目录；用户设置独立保存在 Windows 用户应用数据目录。此仓库只提交源码，不提交运行库、依赖或构建产物。
 
 ## 云端服务
 
@@ -64,3 +64,9 @@ Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 ## 授权
 
 仓库暂未授予开源许可证（`UNLICENSED`）。角色素材及第三方运行库的权利归各自权利人；公开源码不代表取得这些素材的再分发授权。
+
+## Pre-Release 更新与反馈
+
+当前开发分支为 `Pre-Release`。启动时自动检查云端最新版本及公告，新公告显示一次；托盘菜单也可手动检查。单文件版经用户点击下载后校验签名和 SHA256，退出、替换并重启，保留 `.previous` 备份。旧版本需先手动运行 0.3.7 一次。
+
+更新接口为 `/api/releases/latest` 和 `/api/releases/download/文件名`；反馈接口为 `/api/feedback`。反馈由服务器 DeepSeek 分析后交管理员人工批阅，采纳项进入 Pre-Release 待实施队列。客户端只包含更新验签公钥，不包含签名私钥、聊天或分析 API 密钥。改为自己的服务器时需配置自己的发布签名并更换公钥后重新打包。

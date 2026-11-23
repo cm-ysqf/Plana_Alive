@@ -60,6 +60,15 @@
       <div class="actions"><button id="apply-layout">应用对话框与字幕设置</button><button id="reset-layout">恢复默认</button></div>
       <p class="hint">在角色上按住鼠标左键可拖动整个窗口；右键打开菜单。构图和窗口设置会自动保存。</p>
       <p id="settings-status" class="status" role="status"></p>
+      <h2 id="feedback-heading">问题反馈与建议</h2>
+      <p class="hint">反馈文字和应用版本上传后由 DeepSeek 分析，最终由管理员批阅。请勿填写密码、密钥或个人敏感信息。</p>
+      <form id="feedback-form">
+        <label>类型<select id="feedback-category"><option value="bug">问题报告</option><option value="feature">功能建议</option><option value="experience">体验改进</option><option value="other">其他</option></select></label>
+        <label>标题<input id="feedback-title" maxlength="100" required placeholder="简短描述问题或建议"></label>
+        <label>详细说明<textarea id="feedback-content" rows="5" maxlength="4000" required placeholder="发生了什么？如何重现？您希望怎样改进？"></textarea></label>
+        <button id="feedback-submit" type="submit">提交反馈</button>
+        <p id="feedback-status" class="status" role="status"></p>
+      </form>
       <footer id="cloud-address"></footer>
     </section>
   </main>

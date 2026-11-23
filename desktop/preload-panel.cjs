@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('plana', {
   initialize: () => ipcRenderer.invoke('panel:initialize'),
+  onFeedback: fn => ipcRenderer.on('panel:feedback', () => fn()),
   request: (route, body, id) => ipcRenderer.invoke('panel:request', { route, body, id }),
   cancel: id => ipcRenderer.send('panel:cancel', id),
   configure: patch => ipcRenderer.invoke('panel:configure', patch),

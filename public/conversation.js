@@ -1,26 +1,11 @@
 import { normalizeControl } from './chat-protocol.js';
-
-// Keep the first audio request short; punctuation is preferred over a hard cut.
-export function splitSpeech(text, limit = 60) {
-  if (!Number.isInteger(limit) || limit < 1) throw new Error('语音分段长度无效');
-  const chars = Array.from(text.trim()), chunks = [];
-  while (chars.length) {
-    let end = Math.min(limit, chars.length);
-    if (chars.length > limit) {
-      for (let i = end - 1; i >= Math.floor(limit / 3); i--) {
-        if (/[。！？!?、，,；;\n]/u.test(chars[i])) { end = i + 1; break; }
-      }
-    }
-    const chunk = chars.splice(0, end).join('').trim();
-    if (chunk) chunks.push(chunk);
-  }
-  return chunks;
-}
+import { splitSpeech, speechSegments, speechPause, waitForSpeech } from './speech-segments.js';
+export { splitSpeech } from './speech-segments.js';
 
 // Stop/replacement invalidates every awaited generation result.
 export class Conversation {
-  constructor({ request, prepare, stop, pose, play, status, reply, begin, failed }) {
-    Object.assign(this, { request, prepare, stop, pose, play, status, reply, begin, failed });
+  constructor({ request, prepare, stop, pose, play, status, reply, begin, failed, pause = waitForSpeech }) {
+    Object.assign(this, { request, prepare, stop, pose, play, status, reply, begin, failed, pause });
     this.histories = { plana: [], arona: [] }; this.controller = null;
   }
   cancel() { this.controller?.abort(); this.controller = null; this.status('已停止'); }
@@ -54,22 +39,28 @@ export class Conversation {
       }
       if (voice) {
         this.status('正在合成语音…');
-        const chunks = splitSpeech(answer.speech);
+        const chunks = chat ? speechSegments(answer) : splitSpeech(answer.speech).map(text => ({ reply: text, speech: text }));
         // A prefetched error is handled when its turn arrives, never as an unhandled rejection.
         const synthesize = part => this.request('/api/tts', { text: part }, signal, true).then(value => ({ value }), error => ({ error }));
-        let pending = synthesize(chunks[0]);
+        let pending = synthesize(chunks[0].speech);
         for (let i = 0; i < chunks.length; i++) {
           if (i > 0) this.begin?.(true);
+          const gapStarted = performance.now();
           const result = await pending;
           current(); if (result.error) throw result.error;
+          if (i > 0) {
+            const remaining = speechPause(chunks[i - 1].reply) - (performance.now() - gapStarted);
+            if (remaining > 0) await this.pause(remaining, signal);
+            current();
+          }
           const more = i + 1 < chunks.length;
           await this.play(result.value, signal, async () => {
             current();
-            await this.pose({ subtitle: answer.reply }, signal);
+            await this.pose({ subtitle: chunks[i].reply }, signal);
             current();
             this.status(chunks.length > 1 ? `正在说话 · ${i + 1}/${chunks.length}` : '正在说话…');
-            if (more) pending = synthesize(chunks[i + 1]);
-          }, more);
+            if (more) pending = synthesize(chunks[i + 1].speech);
+          }, true);
           current();
         }
         current(); this.status('语音已就绪 · 播放口型随音量变化');

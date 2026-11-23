@@ -175,3 +175,17 @@ function initializeWithStatus() { initialize().catch(error => { $('online').text
 bridge.onReconnect(initializeWithStatus); initializeWithStatus();
 window.addEventListener('keydown', event => { if (event.key === 'Escape') bridge.hide(); });
 window.addEventListener('pagehide', () => { audio.dispose(); lifetime.cancel(); conversation.cancel(); if (objectURL) URL.revokeObjectURL(objectURL); });
+
+let feedbackRequestId;
+$('feedback-form').oninput=()=>{feedbackRequestId=null;};
+bridge.onFeedback?.(()=>{tab('settings');$('feedback-heading').scrollIntoView({behavior:'smooth'});$('feedback-title').focus();});
+$('feedback-form').onsubmit=async event=>{
+  event.preventDefault();const button=$('feedback-submit');button.disabled=true;
+  try{
+    feedbackRequestId ||= crypto.randomUUID();
+    $('feedback-status').textContent='正在提交…';
+    const value=await request('/api/feedback',{requestId:feedbackRequestId,category:$('feedback-category').value,title:$('feedback-title').value.trim(),content:$('feedback-content').value.trim(),appVersion:document.getElementById('app-version')?.textContent||'0.3.7'});
+    $('feedback-status').textContent='反馈已收到 · 编号 '+value.id+'。等待分析与管理员批阅。';$('feedback-form').reset();feedbackRequestId=null;
+  }catch(error){$('feedback-status').textContent='提交失败：'+error.message;}
+  finally{button.disabled=false;}
+};

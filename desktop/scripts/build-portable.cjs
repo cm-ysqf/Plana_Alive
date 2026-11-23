@@ -18,7 +18,7 @@ build({
     asar: true,
     npmRebuild: false,
     files: [
-      'package.json', 'main.cjs', 'geometry.cjs', 'hardware.cjs', 'settings.cjs',
+      'package.json', 'main.cjs', 'updater.cjs', 'update-public-key.json', 'geometry.cjs', 'hardware.cjs', 'settings.cjs',
       'preload-*.cjs', 'ui/**/*', 'display/**/*', 'assets/**/*', '使用说明.txt'
     ],
     win: { icon: path.join(root, 'assets/app.ico'), signExecutable: false },
